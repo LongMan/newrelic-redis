@@ -24,9 +24,9 @@ DependencyDetection.defer do
 
       call_method = ::Redis::Client.new.respond_to?(:call) ? :call : :raw_call_command
 
-      redis_metric_prefix = NewRelic::Control.instance['redis_metric_prefix'] || "Database/"
-
       def call_with_newrelic_trace(*args, &blk)
+        redis_metric_prefix = NewRelic::Control.instance['redis_metric_prefix'] || "Database/"
+
         if NewRelic::Agent::Instrumentation::MetricFrame.recording_web_transaction?
           total_metric = "#{redis_metric_prefix}Redis/allWeb"
         else
