@@ -24,15 +24,17 @@ DependencyDetection.defer do
 
       call_method = ::Redis::Client.new.respond_to?(:call) ? :call : :raw_call_command
 
+      redis_metric_prefix = NewRelic::Control.instance['redis_metric_prefix'] || "Database/"
+
       def call_with_newrelic_trace(*args, &blk)
         if NewRelic::Agent::Instrumentation::MetricFrame.recording_web_transaction?
-          total_metric = 'Database/Redis/allWeb'
+          total_metric = "#{redis_metric_prefix}Redis/allWeb"
         else
-          total_metric = 'Database/Redis/allOther'
+          total_metric = "#{redis_metric_prefix}Redis/allOther"
         end
 
         method_name = args[0].is_a?(Array) ? args[0][0] : args[0]
-        metrics = ["Database/Redis/#{method_name.to_s.upcase}", total_metric]
+        metrics = ["#{redis_metric_prefix}Redis/#{method_name.to_s.upcase}", total_metric]
 
         self.class.trace_execution_scoped(metrics) do
           start = Time.now
@@ -54,21 +56,23 @@ DependencyDetection.defer do
       #
       if public_method_defined? :call_pipelined
         def call_pipelined_with_newrelic_trace(commands, *rest)
+          redis_metric_prefix = NewRelic::Control.instance['redis_metric_prefix'] || "Database/"
+
           if NewRelic::Agent::Instrumentation::MetricFrame.recording_web_transaction?
-            total_metric = 'Database/Redis/allWeb'
+            total_metric = "#{redis_metric_prefix}Redis/allWeb"
           else
-            total_metric = 'Database/Redis/allOther'
+            total_metric = "#{redis_metric_prefix}Redis/allOther"
           end
 
           # Report each command as a metric under pipelined, so the user
           # can at least see what all the commands were. This prevents
           # metric namespace explosion.
 
-          metrics = ["Database/Redis/Pipelined", total_metric]
+          metrics = ["#{redis_metric_prefix}Redis/Pipelined", total_metric]
 
           commands.each do |c|
             name = c.kind_of?(Array) ? c[0] : c
-            metrics << "Database/Redis/Pipelined/#{name.to_s.upcase}"
+            metrics << "#{redis_metric_prefix}Redis/Pipelined/#{name.to_s.upcase}"
           end
 
           self.class.trace_execution_scoped(metrics) do
